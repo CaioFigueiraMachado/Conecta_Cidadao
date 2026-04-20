@@ -18,7 +18,9 @@ import DashboardAdmin from './pages/dashboards/DashboardAdmin';
 import GestaoUsuarios from './pages/dashboards/GestaoUsuarios';
 import Configuracoes from './pages/dashboards/Configuracoes';
 import DashboardOrgao from './pages/dashboards/DashboardOrgao';
+import Demandas from './pages/dashboards/Demandas';
 import MapaOperacional from './pages/dashboards/MapaOperacional';
+import DashboardParceiro from './pages/dashboards/DashboardParceiro';
 import Perfil from './pages/Perfil';
 
 function App() {
@@ -38,7 +40,7 @@ function App() {
         <Route 
           path="/dashboard/cidadao" 
           element={
-            <PrivateRoute allowedRoles={['cidadao']}>
+            <PrivateRoute allowedRoles={['cidadao', 'admin', 'orgao', 'parceiro']}>
               <DashboardCidadao />
             </PrivateRoute>
           } 
@@ -46,7 +48,7 @@ function App() {
         <Route 
           path="/dashboard/cidadao/ocorrencias" 
           element={
-            <PrivateRoute allowedRoles={['cidadao']}>
+            <PrivateRoute allowedRoles={['cidadao', 'admin', 'orgao', 'parceiro']}>
               <Ocorrencias />
             </PrivateRoute>
           } 
@@ -54,7 +56,7 @@ function App() {
         <Route 
           path="/dashboard/cidadao/pontos" 
           element={
-            <PrivateRoute allowedRoles={['cidadao']}>
+            <PrivateRoute allowedRoles={['cidadao', 'admin', 'orgao', 'parceiro']}>
               <Pontos />
             </PrivateRoute>
           } 
@@ -95,7 +97,7 @@ function App() {
           path="/dashboard/orgao/demandas" 
           element={
             <PrivateRoute allowedRoles={['orgao']}>
-              <DashboardOrgao />
+              <Demandas />
             </PrivateRoute>
           } 
         />
@@ -104,6 +106,14 @@ function App() {
           element={
             <PrivateRoute allowedRoles={['orgao']}>
               <MapaOperacional />
+            </PrivateRoute>
+          } 
+        />
+        <Route 
+          path="/dashboard/parceiro" 
+          element={
+            <PrivateRoute allowedRoles={['parceiro']}>
+              <DashboardParceiro />
             </PrivateRoute>
           } 
         />

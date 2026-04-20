@@ -121,5 +121,116 @@ export const updateReportStatus = (reportId, newStatus) => {
   return report;
 };
 
+// --- FUNÇÕES DE BENEFÍCIOS ---
+
+export const getSystemConfig = () => {
+  const db = getDB();
+  const defaults = {
+    platformName: 'Conecta Cidadão',
+    supportEmail: 'admin@conectacidadao.com',
+    language: 'Português (Brasil)',
+    maintenanceMode: false,
+    auditLogs: true,
+    sessionTimeout: 60
+  };
+  return { ...defaults, ...(db.config || {}) };
+};
+
+export const saveSystemConfig = (newConfig) => {
+  const db = getDB();
+  db.config = { ...getSystemConfig(), ...newConfig };
+  saveDB(db);
+  return db.config;
+};
+
+export const getAllBenefits = () => {
+  const db = getDB();
+  return db.benefits || [];
+};
+
+export const getBenefitsByPartner = (partnerId) => {
+  const db = getDB();
+  return (db.benefits || []).filter(b => b.partnerId === partnerId);
+};
+
+export const addBenefit = (benefitData) => {
+  const db = getDB();
+  if (!db.benefits) db.benefits = [];
+  const newBenefit = { id: Date.now(), ...benefitData };
+  db.benefits.unshift(newBenefit);
+  saveDB(db);
+  return newBenefit;
+};
+
+export const deleteBenefit = (id) => {
+  const db = getDB();
+  if (!db.benefits) return;
+  db.benefits = db.benefits.filter(b => b.id !== id);
+  saveDB(db);
+};
+
+export const redeemBenefit = (userId, benefit) => {
+  const db = getDB();
+  if (!db.redeemed) db.redeemed = [];
+  
+  const code = benefit.code || Math.random().toString(36).substring(2, 8).toUpperCase();
+  const redeemedItem = {
+    id: Date.now(),
+    userId,
+    benefitId: benefit.id,
+    nome: benefit.nome,
+    empresa: benefit.empresa,
+    pontos: benefit.pontos,
+    code,
+    data: new Date().toLocaleDateString('pt-BR')
+  };
+  db.redeemed.push(redeemedItem);
+  saveDB(db);
+  return redeemedItem;
+};
+
+export const getRedeemedBenefits = (userId) => {
+  const db = getDB();
+  return (db.redeemed || []).filter(r => r.userId === userId);
+};
+
+// --- FUNÇÕES DE APROVAÇÕES DE PARCEIROS ---
+
+export const addPartnerRequest = (data) => {
+  const db = getDB();
+  if (!db.approvals) db.approvals = [];
+  const newReq = { id: Date.now().toString(), status: 'Pendente', dataReq: new Date().toLocaleDateString('pt-BR'), ...data };
+  db.approvals.unshift(newReq);
+  saveDB(db);
+  return newReq;
+};
+
+export const getPartnerRequests = () => {
+  const db = getDB();
+  return db.approvals || [];
+};
+
+export const resolvePartnerRequest = (id, accept) => {
+  const db = getDB();
+  if (!db.approvals) return;
+  const index = db.approvals.findIndex(a => a.id === id);
+  if (index !== -1) {
+    const req = db.approvals[index];
+    req.status = accept ? 'Aprovado' : 'Recusado';
+    
+    if (accept) {
+      db.users.push({
+        id: 'parceiro-' + Date.now(),
+        name: req.empresa,
+        email: req.email,
+        password: '123', // Senha padrão (idealmente enviaria e-mail para configurar)
+        role: 'parceiro',
+        status: 'Ativo'
+      });
+    }
+    saveDB(db);
+  }
+};
+
 // Inicializa automaticamente
 initDB();

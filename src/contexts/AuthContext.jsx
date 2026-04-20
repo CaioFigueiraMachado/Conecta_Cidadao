@@ -14,35 +14,33 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const login = (email, password, role) => {
-    // 1. Verifica se já existe um usuário com esse e-mail no LocalStorage
+  const login = (email, password) => {
     let dbUser = findUserByEmail(email);
 
     if (dbUser) {
-      // Se existir, checa a senha
-      if (dbUser.password === password && dbUser.role === role) {
+      if (dbUser.password === password) {
         setUser(dbUser);
         localStorage.setItem('@conecta-cidadao:session', JSON.stringify(dbUser));
-        return true;
+        return dbUser;
       } else {
-        alert("E-mail, senha ou tipo de conta incorretos.");
-        return false;
+        alert("E-mail ou senha incorretos.");
+        return null;
       }
     } else {
       alert("Conta não encontrada. Por favor, crie uma conta primeiro.");
-      return false;
+      return null;
     }
   };
 
-  const registerAndLogin = (nome, email, password, role) => {
+  const registerAndLogin = (nome, email, password) => {
     try {
-      const newUser = registerUser({ name: nome, email, password, role });
+      const newUser = registerUser({ name: nome, email, password, role: 'cidadao' });
       setUser(newUser);
       localStorage.setItem('@conecta-cidadao:session', JSON.stringify(newUser));
-      return true;
+      return newUser;
     } catch (e) {
       alert(e.message);
-      return false;
+      return null;
     }
   };
 

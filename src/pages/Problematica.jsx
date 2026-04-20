@@ -6,7 +6,7 @@ export default function Problematica() {
   return (
     <Layout>
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16">
-        
+
         {/* Header */}
         <div className="text-center mb-16">
           <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -21,9 +21,9 @@ export default function Problematica() {
         {/* Desafios */}
         <div className="mb-16">
           <h2 className="text-2xl font-bold text-slate-800 mb-8 flex items-center gap-2 border-b border-slate-200 pb-4">
-            <span className="text-red-500">📉</span> Desafios Urbanos Recorrentes
+            <span className="text-red-500"></span> Desafios Urbanos Recorrentes
           </h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:border-blue-200 transition-colors">
               <h3 className="font-bold text-slate-800 mb-2 flex items-center gap-2">
@@ -31,7 +31,7 @@ export default function Problematica() {
               </h3>
               <p className="text-sm text-slate-600">Buracos e má conservação do asfalto que causam acidentes e danos aos veículos.</p>
             </div>
-            
+
             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:border-blue-200 transition-colors">
               <h3 className="font-bold text-slate-800 mb-2 flex items-center gap-2">
                 <Zap size={18} className="text-slate-400" /> Iluminação Pública
@@ -94,9 +94,9 @@ export default function Problematica() {
           {/* Decorative circles */}
           <div className="absolute right-0 top-0 w-64 h-64 border-4 border-white/10 rounded-full -mr-20 -mt-20"></div>
           <div className="absolute right-0 top-0 w-48 h-48 border-4 border-white/10 rounded-full -mr-12 -mt-12"></div>
-          
+
           <h2 className="text-3xl font-bold mb-8 relative z-10">A Solução: Conecta Cidadão</h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10 relative z-10">
             <div>
               <h3 className="text-lg font-bold mb-2 text-blue-200">Reporte Fácil</h3>

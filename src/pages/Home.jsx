@@ -15,7 +15,7 @@ export default function Home() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-12">
           <div className="w-full md:w-1/2">
             <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight mb-6 leading-tight">
-              A cidade que você quer <br/>começa com a sua voz.
+              A cidade que você quer <br />começa com a sua voz.
             </h1>
             <p className="text-lg text-slate-300 mb-8 max-w-lg">
               Reporte problemas urbanos, ganhe pontos e troque por benefícios reais. Conectamos cidadãos, prefeituras e empresas.
@@ -32,14 +32,14 @@ export default function Home() {
 
           <div className="w-full md:w-1/2 mt-10 md:mt-0 relative z-10">
             <div className="bg-white/10 backdrop-blur-md border border-white/20 p-6 rounded-2xl shadow-xl">
-              <h3 className="text-xl font-bold mb-6 flex items-center gap-2"><span className="text-green-400">⚡</span> Ações Rápidas</h3>
+              <h3 className="text-xl font-bold mb-6 flex items-center gap-2"><span className="text-green-400"></span> Ações Rápidas</h3>
               <div className="space-y-3">
                 {[
                   { to: '/login', icon: AlertTriangle, color: 'orange', title: 'Registrar Ocorrência', sub: 'Ganhe +50 pontos por reporte' },
                   { to: '/mapa', icon: Map, color: 'blue', title: 'Mapa ao Vivo', sub: 'Veja as demandas da região' },
                   { to: '/beneficios', icon: Gift, color: 'pink', title: 'Benefícios', sub: 'Troque seus pontos por prêmios' },
                 ].map(({ to, icon: Icon, color, title, sub }) => (
-                  <Link key={to+title} to={to} className="flex items-center justify-between bg-black/20 hover:bg-black/40 p-4 rounded-xl transition-colors group">
+                  <Link key={to + title} to={to} className="flex items-center justify-between bg-black/20 hover:bg-black/40 p-4 rounded-xl transition-colors group">
                     <div className="flex items-center gap-4">
                       <div className={`bg-${color}-500/20 text-${color}-400 p-2 rounded-lg group-hover:bg-${color}-500 group-hover:text-white transition-colors`}><Icon size={22} /></div>
                       <div><h4 className="font-semibold text-white">{title}</h4><p className="text-xs text-slate-300">{sub}</p></div>

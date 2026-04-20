@@ -1,38 +1,52 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Shield, User, Landmark, ArrowLeft } from 'lucide-react';
+import { Shield, User, Landmark, ArrowLeft, Briefcase } from 'lucide-react';
 
 export default function Login() {
-  const [role, setRole] = useState('cidadao');
   const [isLogin, setIsLogin] = useState(true);
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotSent, setForgotSent] = useState(false);
   const { login, registerAndLogin } = useAuth();
   const navigate = useNavigate();
+
+  const handleForgotPassword = (e) => {
+    e.preventDefault();
+    if (!forgotEmail) return;
+    setForgotSent(true);
+    setTimeout(() => {
+      setShowForgot(false);
+      setForgotSent(false);
+      setForgotEmail('');
+    }, 3000);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    let success = false;
+    let resultUser = null;
 
     if (isLogin) {
-      success = login(email, password, role);
+      resultUser = login(email, password);
     } else {
       if (!nome.trim()) { setError('Por favor, informe seu nome.'); setLoading(false); return; }
-      success = registerAndLogin(nome, email, password, role);
+      resultUser = registerAndLogin(nome, email, password);
     }
 
     setLoading(false);
 
-    if (success) {
-      if (role === 'admin') navigate('/dashboard/admin');
-      else if (role === 'orgao') navigate('/dashboard/orgao');
+    if (resultUser) {
+      if (resultUser.role === 'admin') navigate('/dashboard/admin');
+      else if (resultUser.role === 'orgao') navigate('/dashboard/orgao');
+      else if (resultUser.role === 'parceiro') navigate('/dashboard/parceiro');
       else navigate('/dashboard/cidadao');
     }
   };
@@ -55,16 +69,7 @@ export default function Login() {
             {isLogin ? ' cadastre-se agora' : 'faça login aqui'}
           </button>
         </p>
-        {!isLogin && (
-          <p className="mt-2 text-center text-xs text-amber-600 bg-amber-50 p-2 rounded-lg">
-            🔑 Conta de <strong>Admin</strong> para testes: <strong>admin@conectacidadao.com</strong> / senha: <strong>123</strong>
-          </p>
-        )}
-        {isLogin && (
-          <p className="mt-2 text-center text-xs text-blue-700 bg-blue-50 p-2 rounded-lg">
-            🔑 Admin padrão: <strong>admin@conectacidadao.com</strong> / <strong>123</strong>
-          </p>
-        )}
+
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
@@ -76,25 +81,7 @@ export default function Login() {
             </div>
           )}
 
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-3 text-center">
-              {isLogin ? 'Como você quer entrar?' : 'Que tipo de conta deseja criar?'}
-            </label>
-            <div className="grid grid-cols-3 gap-3">
-              <button type="button" onClick={() => setRole('cidadao')}
-                className={`flex flex-col items-center p-3 rounded-xl border ${role === 'cidadao' ? 'border-blue-500 bg-blue-50 text-blue-600' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
-                <User size={20} className="mb-1" /><span className="text-xs font-medium">Cidadão</span>
-              </button>
-              <button type="button" onClick={() => setRole('orgao')}
-                className={`flex flex-col items-center p-3 rounded-xl border ${role === 'orgao' ? 'border-blue-500 bg-blue-50 text-blue-600' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
-                <Landmark size={20} className="mb-1" /><span className="text-xs font-medium">Órgão/Pref</span>
-              </button>
-              <button type="button" onClick={() => setRole('admin')}
-                className={`flex flex-col items-center p-3 rounded-xl border ${role === 'admin' ? 'border-blue-500 bg-blue-50 text-blue-600' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
-                <Shield size={20} className="mb-1" /><span className="text-xs font-medium">Admin</span>
-              </button>
-            </div>
-          </div>
+          <div className="mb-2"></div>
 
           <form className="space-y-5" onSubmit={handleSubmit}>
             {!isLogin && (
@@ -126,13 +113,13 @@ export default function Login() {
                   <input id="remember-me" type="checkbox" className="h-4 w-4 text-blue-600 border-gray-300 rounded" />
                   <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900"> Manter Login</label>
                 </div>
-                <a href="#" className="text-sm font-medium text-blue-600 hover:text-blue-500">Esqueceu a senha?</a>
+                <button type="button" onClick={() => setShowForgot(true)} className="text-sm font-medium text-blue-600 hover:text-blue-500">Esqueceu a senha?</button>
               </div>
             )}
 
             <button type="submit" disabled={loading}
-              className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-              {loading ? 'Aguarde...' : isLogin ? `Entrar como ${role === 'cidadao' ? 'Cidadão' : role === 'orgao' ? 'Órgão' : 'Admin'}` : 'Criar Conta e Entrar'}
+              className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-blue-200 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed transition-all">
+              {loading ? 'Aguarde...' : isLogin ? 'Entrar' : 'Criar Conta e Entrar'}
             </button>
           </form>
 
@@ -143,6 +130,32 @@ export default function Login() {
           </div>
         </div>
       </div>
+
+      {showForgot && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md animate-in fade-in">
+          <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-10 animate-in zoom-in duration-300">
+            <h3 className="text-2xl font-black text-slate-800 tracking-tight mb-2">Recuperar Senha</h3>
+            <p className="text-sm text-slate-500 mb-6">Digite seu e-mail para receber as instruções de recuperação.</p>
+
+            {forgotSent ? (
+              <div className="bg-green-50 text-green-700 p-4 rounded-xl border border-green-200 text-sm font-bold text-center">
+                E-mail de recuperação enviado com sucesso! Verifique sua caixa de entrada.
+              </div>
+            ) : (
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <div>
+                  <input type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} required placeholder="seu@email.com" className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div className="flex gap-3">
+                  <button type="button" onClick={() => setShowForgot(false)} className="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-all">Cancelar</button>
+                  <button type="submit" className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all">Enviar</button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

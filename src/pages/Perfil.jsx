@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import DashboardLayout from '../components/DashboardLayout';
+import { useState, useRef } from 'react';
+import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import { updateUser } from '../services/storage';
-import { User, Mail, Lock, Building, Check } from 'lucide-react';
+import { User, Mail, Lock, Building, Check, Camera, Image as ImageIcon } from 'lucide-react';
 
 export default function Perfil() {
   const { user, updateUserSession } = useAuth();
@@ -11,7 +11,11 @@ export default function Perfil() {
   const [email, setEmail] = useState(user?.email || '');
   const [novaSenha, setNovaSenha] = useState('');
   const [confirmSenha, setConfirmSenha] = useState('');
+  const [profilePic, setProfilePic] = useState(user?.profilePic || null);
+  const [bannerPic, setBannerPic] = useState(user?.bannerPic || null);
   const [erro, setErro] = useState('');
+  const profileInputRef = useRef(null);
+  const bannerInputRef = useRef(null);
 
   const isInstituicao = user?.role === 'admin' || user?.role === 'orgao' || user?.role === 'parceiro';
 
@@ -25,6 +29,8 @@ export default function Perfil() {
 
     const updates = { name: nome, email };
     if (novaSenha) updates.password = novaSenha;
+    if (profilePic) updates.profilePic = profilePic;
+    if (bannerPic) updates.bannerPic = bannerPic;
 
     const updated = updateUser(user.id, updates);
     if (updated) {
@@ -34,105 +40,146 @@ export default function Perfil() {
     }
   };
 
+  const handleImageUpload = (e, setPic) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPic(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
-    <DashboardLayout title="Meu Perfil">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="bg-white rounded-t-2xl p-8 border border-b-0 border-slate-100 flex items-end gap-6 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-r from-blue-600 to-blue-400"></div>
-          <div className="relative z-10 w-24 h-24 bg-white rounded-full p-1 shadow-md">
-            <div className="w-full h-full bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-3xl font-bold">
-              {user?.name?.charAt(0)?.toUpperCase()}
-            </div>
-          </div>
-          <div className="relative z-10 pb-2">
-            <h2 className="text-2xl font-bold text-slate-800">{user?.name}</h2>
-            <p className="text-slate-500 capitalize">{user?.role === 'cidadao' ? 'Cidadão' : user?.role === 'orgao' ? 'Órgão Público' : user?.role === 'admin' ? 'Administrador' : 'Parceiro'}</p>
-            {user?.role === 'cidadao' && (
-              <p className="text-sm text-blue-600 font-medium mt-1">⭐ {user?.pontos || 0} pontos</p>
-            )}
-          </div>
-        </div>
-
-        {/* Formulário */}
-        <div className="bg-white rounded-b-2xl p-8 border border-slate-100 shadow-sm">
-          {erro && <div className="mb-4 p-3 bg-red-50 border border-red-100 text-red-700 text-sm rounded-lg">{erro}</div>}
-
-          <form onSubmit={handleSave} className="space-y-8">
-            {/* Dados Pessoais */}
-            <div>
-              <h3 className="text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">Informações Pessoais</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Nome Completo</label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <input type="text" value={nome} onChange={e => setNome(e.target.value)} required
-                      className="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">E-mail</label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
-                      className="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+    <Layout>
+      <div className="bg-slate-50 min-h-screen py-10 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto">
+          {/* Header */}
+          <div className="bg-white rounded-t-[3rem] border border-b-0 border-slate-100 relative overflow-hidden shadow-sm">
+            <div 
+              className="w-full h-48 md:h-64 bg-gradient-to-r from-blue-600 to-blue-400 bg-cover bg-center"
+              style={{ backgroundImage: bannerPic ? `url(${bannerPic})` : undefined }}
+            ></div>
+            <button 
+              onClick={() => bannerInputRef.current.click()}
+              className="absolute top-6 right-6 bg-white/20 hover:bg-white/40 backdrop-blur-md text-white p-3 rounded-2xl transition-all shadow-sm group"
+              title="Alterar Banner"
+            >
+              <ImageIcon size={22} className="group-hover:scale-110 transition-transform" />
+            </button>
+            
+            <div className="px-10 pb-10 flex flex-col md:flex-row md:items-end gap-6 relative">
+              <div className="relative -mt-16 md:-mt-20 z-10 w-32 h-32 md:w-40 md:h-40 bg-white rounded-[2rem] p-1.5 shadow-2xl flex-shrink-0 group cursor-pointer hover:scale-105 transition-transform duration-300" onClick={() => profileInputRef.current.click()}>
+                <div className="w-full h-full bg-blue-50 text-blue-600 rounded-[1.7rem] flex items-center justify-center text-4xl md:text-6xl font-black overflow-hidden relative border border-slate-100">
+                  {profilePic ? (
+                    <img src={profilePic} alt="Perfil" className="w-full h-full object-cover" />
+                  ) : (
+                    user?.name?.charAt(0)?.toUpperCase()
+                  )}
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
+                    <Camera className="text-white" size={32} />
                   </div>
                 </div>
               </div>
+              
+              <div className="flex-1 mt-4 md:mt-0 md:pb-2">
+                <h2 className="text-3xl md:text-4xl font-black text-slate-800 tracking-tight">{user?.name}</h2>
+                <p className="text-slate-500 capitalize font-bold tracking-widest text-xs uppercase mt-1">{user?.role === 'cidadao' ? 'Cidadão' : user?.role === 'orgao' ? 'Órgão Público' : user?.role === 'admin' ? 'Administrador' : 'Parceiro'}</p>
+                {user?.role === 'cidadao' && (
+                  <p className="text-sm text-blue-600 font-black mt-3 bg-blue-50 inline-flex items-center px-4 py-1.5 rounded-full border border-blue-100 shadow-sm">⭐ {user?.pontos || 0} pontos disponíveis</p>
+                )}
+              </div>
             </div>
+            
+            <input type="file" ref={profileInputRef} className="hidden" accept="image/*" onChange={e => handleImageUpload(e, setProfilePic)} />
+            <input type="file" ref={bannerInputRef} className="hidden" accept="image/*" onChange={e => handleImageUpload(e, setBannerPic)} />
+          </div>
 
-            {/* Dados Institucionais */}
-            {isInstituicao && (
+          {/* Formulário */}
+          <div className="bg-white rounded-b-[3rem] p-10 border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] mb-10">
+            {erro && <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-700 text-sm rounded-2xl font-bold flex items-center gap-2"><Lock size={18}/>{erro}</div>}
+
+            <form onSubmit={handleSave} className="space-y-10">
+              {/* Dados Pessoais */}
               <div>
-                <h3 className="text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">Dados da Instituição</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <h3 className="text-xl font-black text-slate-800 mb-6 flex items-center gap-3">
+                  <span className="w-8 h-8 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center"><User size={18}/></span>
+                  Informações Pessoais
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Tipo de Perfil</label>
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Nome Completo</label>
                     <div className="relative">
-                      <Building className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                      <input type="text" readOnly value={user?.role === 'orgao' ? 'Órgão Público / Prefeitura' : user?.role === 'admin' ? 'Administrador' : 'Parceiro / Empresa'}
-                        className="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed" />
+                      <input type="text" value={nome} onChange={e => setNome(e.target.value)} required
+                        className="w-full px-6 py-4 bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-blue-500 font-bold transition-all" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">E-mail Corporativo</label>
+                    <div className="relative">
+                      <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
+                        className="w-full px-6 py-4 bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-blue-500 font-bold transition-all" />
                     </div>
                   </div>
                 </div>
               </div>
-            )}
 
-            {/* Segurança */}
-            <div>
-              <h3 className="text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">Alterar Senha</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Dados Institucionais */}
+              {isInstituicao && (
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Nova Senha</label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <input type="password" value={novaSenha} onChange={e => setNovaSenha(e.target.value)} placeholder="Deixe em branco para manter"
-                      className="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+                  <h3 className="text-xl font-black text-slate-800 mb-6 flex items-center gap-3">
+                    <span className="w-8 h-8 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center"><Building size={18}/></span>
+                    Dados da Instituição
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                      <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Tipo de Perfil</label>
+                      <div className="relative">
+                        <input type="text" readOnly value={user?.role === 'orgao' ? 'Órgão Público / Prefeitura' : user?.role === 'admin' ? 'Administrador' : 'Parceiro / Empresa'}
+                          className="w-full px-6 py-4 rounded-2xl border-none bg-slate-100 text-slate-500 font-bold cursor-not-allowed" />
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Confirmar Nova Senha</label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <input type="password" value={confirmSenha} onChange={e => setConfirmSenha(e.target.value)} placeholder="Repita a nova senha"
-                      className="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+              )}
+
+              {/* Segurança */}
+              <div>
+                <h3 className="text-xl font-black text-slate-800 mb-6 flex items-center gap-3">
+                  <span className="w-8 h-8 bg-red-50 text-red-600 rounded-xl flex items-center justify-center"><Lock size={18}/></span>
+                  Segurança da Conta
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div>
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Nova Senha</label>
+                    <div className="relative">
+                      <input type="password" value={novaSenha} onChange={e => setNovaSenha(e.target.value)} placeholder="Deixe em branco para manter"
+                        className="w-full px-6 py-4 bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-blue-500 font-bold transition-all" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Confirmar Nova Senha</label>
+                    <div className="relative">
+                      <input type="password" value={confirmSenha} onChange={e => setConfirmSenha(e.target.value)} placeholder="Repita a nova senha"
+                        className="w-full px-6 py-4 bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-blue-500 font-bold transition-all" />
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Ações */}
-            <div className="flex items-center justify-end gap-4 pt-4 border-t border-slate-100">
-              <button type="submit" className={`px-8 py-3 font-bold rounded-xl shadow-lg transition-all flex items-center gap-2 ${
-                salvo ? 'bg-green-500 text-white shadow-green-200' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200'
-              }`}>
-                {salvo ? <><Check size={18} /> Salvo!</> : 'Salvar Alterações'}
-              </button>
-            </div>
-          </form>
+              {/* Ações */}
+              <div className="flex items-center justify-end gap-4 pt-8 border-t border-slate-100">
+                <button type="submit" className={`px-10 py-4 font-black text-sm uppercase tracking-widest rounded-full shadow-xl transition-all flex items-center gap-3 ${
+                  salvo ? 'bg-green-500 text-white shadow-green-200' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200 hover:-translate-y-1'
+                }`}>
+                  {salvo ? <><Check size={20} /> Salvo com sucesso!</> : 'Salvar Alterações'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
-    </DashboardLayout>
+    </Layout>
   );
 }

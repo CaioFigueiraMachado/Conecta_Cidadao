@@ -1,10 +1,25 @@
+import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Bell, LogOut, LayoutDashboard } from 'lucide-react';
+import { Bell, LogOut, LayoutDashboard, ChevronDown, User } from 'lucide-react';
+import { getSystemConfig } from '../services/storage';
 
 export default function Header() {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const userMenuRef = useRef(null);
+  const platformName = getSystemConfig().platformName || 'Conecta Cidadão';
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setShowUserMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const navLinks = [
     { to: '/', label: 'Início' },
@@ -23,9 +38,9 @@ export default function Header() {
           {/* Logo */}
           <div className="flex-shrink-0 flex items-center">
             <Link to="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
-              <img src="/logo.png" alt="Logo Conecta Cidadão" className="w-10 h-10 object-contain" />
-              <span className="font-bold text-xl text-slate-800">
-                Conecta <span className="font-normal text-slate-500">Cidadão</span>
+              <img src="/logo.png" alt={`Logo ${platformName}`} className="w-10 h-10 object-contain" />
+              <span className="font-bold text-xl text-slate-800 leading-tight">
+                {platformName.split(' ')[0]} <span className="font-normal text-slate-500">{platformName.split(' ').slice(1).join(' ')}</span>
               </span>
             </Link>
           </div>
@@ -38,11 +53,10 @@ export default function Header() {
                 <Link
                   key={to}
                   to={to}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    isActive
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive
                       ? 'text-blue-600 bg-blue-50'
                       : 'text-gray-600 hover:text-blue-600 hover:bg-slate-50'
-                  }`}
+                    }`}
                 >
                   {label}
                 </Link>
@@ -53,32 +67,59 @@ export default function Header() {
           {/* Área do Usuário */}
           <div className="flex items-center gap-3">
             {user ? (
-              <>
-                <Link
-                  to={`/dashboard/${user.role}`}
-                  className="hidden sm:flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors"
-                  title="Ir para o painel"
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200 hover:bg-slate-100 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
                 >
-                  <LayoutDashboard size={18} />
-                  <span className="hidden lg:inline">Painel</span>
-                </Link>
-
-                <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200">
-                  <div className="w-7 h-7 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
-                    {user.name.charAt(0).toUpperCase()}
+                  <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm overflow-hidden">
+                    {user.profilePic ? (
+                      <img src={user.profilePic} alt="User" className="w-full h-full object-cover" />
+                    ) : (
+                      user.name.charAt(0).toUpperCase()
+                    )}
                   </div>
-                  <Link to={`/dashboard/${user.role}`} className="text-sm font-medium text-gray-700 hover:text-blue-600 max-w-[120px] truncate hidden sm:block">
-                    {user.name}
-                  </Link>
-                  <button
-                    onClick={logout}
-                    className="ml-1 text-gray-400 hover:text-red-500 transition-colors"
-                    title="Sair da conta"
-                  >
-                    <LogOut size={16} />
-                  </button>
-                </div>
-              </>
+                  <div className="hidden sm:block text-left mr-1">
+                    <p className="text-sm font-medium text-gray-700 max-w-[120px] truncate leading-tight">{user.name}</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-tight">{user.role}</p>
+                  </div>
+                  <ChevronDown size={14} className="text-slate-400 hidden sm:block" />
+                </button>
+
+                {showUserMenu && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-slate-100 py-2 z-50 animate-in fade-in slide-in-from-top-2">
+                    <div className="px-4 py-3 border-b border-slate-50 mb-1">
+                      <p className="text-sm font-bold text-slate-800 truncate">{user.name}</p>
+                      <p className="text-xs font-medium text-slate-500 truncate">{user.email}</p>
+                    </div>
+
+                    <Link
+                      to={`/dashboard/${user.role}`}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                      onClick={() => setShowUserMenu(false)}
+                    >
+                      <LayoutDashboard size={18} /> Meu Dashboard
+                    </Link>
+
+                    <Link
+                      to="/perfil"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                      onClick={() => setShowUserMenu(false)}
+                    >
+                      <User size={18} /> Perfil
+                    </Link>
+
+                    <div className="h-px bg-slate-50 my-1"></div>
+
+                    <button
+                      onClick={() => { setShowUserMenu(false); logout(); }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-red-500 hover:bg-red-50 transition-colors text-left"
+                    >
+                      <LogOut size={18} /> Sair da Conta
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
               <Link
                 to="/login"

@@ -1,7 +1,26 @@
+import { useState } from 'react';
 import Layout from '../components/Layout';
-import { Building, Award, BarChart3, CheckCircle, Send } from 'lucide-react';
+import { Building, Award, BarChart3, CheckCircle, Send, Loader2 } from 'lucide-react';
+import { addPartnerRequest } from '../services/storage';
 
 export default function Parceiro() {
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [form, setForm] = useState({
+    empresa: '', cnpj: '', responsavel: '', cargo: '', email: '', telefone: '', ideia: '', beneficios: ''
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setTimeout(() => {
+      addPartnerRequest(form);
+      setLoading(false);
+      setSuccess(true);
+      setForm({ empresa: '', cnpj: '', responsavel: '', cargo: '', email: '', telefone: '', ideia: '', beneficios: '' });
+      setTimeout(() => setSuccess(false), 5000);
+    }, 2000);
+  };
   return (
     <Layout>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16">
@@ -85,57 +104,68 @@ export default function Parceiro() {
             <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100 relative">
               <h2 className="text-2xl font-bold text-slate-800 mb-8">Formulário de Solicitação</h2>
               
-              <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Nome da Empresa</label>
-                    <input type="text" placeholder="Ex: Mercado Compre Bem" className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" />
+              {success ? (
+                <div className="bg-green-50 border border-green-200 p-8 rounded-2xl text-center">
+                  <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle size={32} />
                   </div>
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">CNPJ</label>
-                    <input type="text" placeholder="00.000.000/0000-00" className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" />
-                  </div>
+                  <h3 className="text-xl font-bold text-green-800 mb-2">Solicitação Enviada!</h3>
+                  <p className="text-green-600">Nossa equipe analisará sua proposta e entrará em contato em breve.</p>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Nome do Responsável</label>
-                    <input type="text" placeholder="Nome Completo" className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" />
+              ) : (
+                <form className="space-y-6" onSubmit={handleSubmit}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-2">Nome da Empresa</label>
+                      <input required type="text" value={form.empresa} onChange={e => setForm({...form, empresa: e.target.value})} placeholder="Ex: Mercado Compre Bem" className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-2">CNPJ</label>
+                      <input required type="text" value={form.cnpj} onChange={e => setForm({...form, cnpj: e.target.value})} placeholder="00.000.000/0000-00" className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Cargo</label>
-                    <input type="text" placeholder="Ex: Gerente de Marketing" className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-2">Nome do Responsável</label>
+                      <input required type="text" value={form.responsavel} onChange={e => setForm({...form, responsavel: e.target.value})} placeholder="Nome Completo" className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-2">Cargo</label>
+                      <input required type="text" value={form.cargo} onChange={e => setForm({...form, cargo: e.target.value})} placeholder="Ex: Gerente de Marketing" className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" />
+                    </div>
                   </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">E-mail Corporativo</label>
-                    <input type="email" placeholder="contato@empresa.com.br" className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-2">E-mail Corporativo</label>
+                      <input required type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder="contato@empresa.com.br" className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-2">Telefone / WhatsApp</label>
+                      <input required type="text" value={form.telefone} onChange={e => setForm({...form, telefone: e.target.value})} placeholder="(00) 00000-0000" className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" />
+                    </div>
                   </div>
+
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Telefone / WhatsApp</label>
-                    <input type="text" placeholder="(00) 00000-0000" className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" />
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Qual sua ideia de parceria?</label>
+                    <textarea required rows="3" value={form.ideia} onChange={e => setForm({...form, ideia: e.target.value})} placeholder="Conte-nos um pouco sobre a sua empresa e por que deseja se juntar ao Conecta Cidadão..." className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"></textarea>
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Qual sua ideia de parceria?</label>
-                  <textarea rows="3" placeholder="Conte-nos um pouco sobre a sua empresa e por que deseja se juntar ao Conecta Cidadão..." className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"></textarea>
-                </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Benefícios que deseja oferecer (Exemplos)</label>
+                    <textarea required rows="2" value={form.beneficios} onChange={e => setForm({...form, beneficios: e.target.value})} placeholder="Ex: 10% de desconto em compras acima de R$100, ingressos cortesias..." className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"></textarea>
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Benefícios que deseja oferecer (Exemplos)</label>
-                  <textarea rows="2" placeholder="Ex: 10% de desconto em compras acima de R$100, ingressos cortesias..." className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"></textarea>
-                </div>
-
-                <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-200 transition-all flex justify-center items-center gap-2 mt-4">
-                  <Send size={20} /> Enviar Solicitação
-                </button>
-                <p className="text-xs text-center text-slate-400 mt-4">
-                  Ao enviar, você concorda com nossos Termos de Uso e Política de Privacidade.
-                </p>
-              </form>
+                  <button disabled={loading} type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-200 transition-all flex justify-center items-center gap-2 mt-4 disabled:opacity-70 disabled:cursor-not-allowed">
+                    {loading ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
+                    {loading ? 'Enviando...' : 'Enviar Solicitação'}
+                  </button>
+                  <p className="text-xs text-center text-slate-400 mt-4">
+                    Ao enviar, você concorda com nossos Termos de Uso e Política de Privacidade.
+                  </p>
+                </form>
+              )}
             </div>
           </div>
 

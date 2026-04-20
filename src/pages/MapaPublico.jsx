@@ -14,14 +14,16 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-// Ícones coloridos por status
+// Ícones coloridos por status (Usando SVG embutido para não depender de APIs externas)
 const getIcon = (status) => {
-  const color = status === 'Resolvido' ? '2ecc71' : status === 'Em andamento' ? 'f39c12' : 'e74c3c';
-  return L.icon({
-    iconUrl: `https://chart.googleapis.com/chart?chst=d_map_pin_letter&chld=%E2%80%A2|${color}|ffffff`,
-    iconSize: [21, 34],
-    iconAnchor: [10, 34],
-    popupAnchor: [1, -34],
+  const color = status === 'Resolvido' ? '#22c55e' : status === 'Em andamento' ? '#eab308' : '#ef4444';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${color}" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3" fill="white"/></svg>`;
+  return L.divIcon({
+    className: 'custom-leaflet-icon',
+    html: `<div style="width: 36px; height: 36px; filter: drop-shadow(0 8px 8px rgba(0,0,0,0.2)); transform: translate(-18px, -36px); hover:scale-110 transition-transform cursor-pointer">${svg}</div>`,
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
+    popupAnchor: [0, -36],
   });
 };
 
@@ -63,7 +65,7 @@ export default function MapaPublico() {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                <span className="text-blue-600">📍</span> Mapa Interativo de Ocorrências
+                <span className="text-blue-600"></span> Mapa Interativo de Ocorrências
               </h1>
               <p className="text-slate-500 text-sm mt-1">Visualize e filtre todos os problemas reportados em tempo real.</p>
             </div>
@@ -85,9 +87,9 @@ export default function MapaPublico() {
           <div className="flex flex-wrap gap-2 mt-4">
             {[
               { label: `Todos (${reports.length})`, value: 'Todos', cls: 'bg-slate-100 text-slate-700 hover:bg-slate-200' },
-              { label: `🔴 Pendentes (${pendentes})`, value: 'Pendente', cls: 'bg-red-50 text-red-600 border border-red-100 hover:bg-red-100' },
-              { label: `🟡 Em Andamento (${andamento})`, value: 'Em andamento', cls: 'bg-yellow-50 text-yellow-700 border border-yellow-100 hover:bg-yellow-100' },
-              { label: `🟢 Resolvidos (${resolvidos})`, value: 'Resolvido', cls: 'bg-green-50 text-green-700 border border-green-100 hover:bg-green-100' },
+              { label: ` Pendentes (${pendentes})`, value: 'Pendente', cls: 'bg-red-50 text-red-600 border border-red-100 hover:bg-red-100' },
+              { label: ` Em Andamento (${andamento})`, value: 'Em andamento', cls: 'bg-yellow-50 text-yellow-700 border border-yellow-100 hover:bg-yellow-100' },
+              { label: ` Resolvidos (${resolvidos})`, value: 'Resolvido', cls: 'bg-green-50 text-green-700 border border-green-100 hover:bg-green-100' },
             ].map(f => (
               <button key={f.value} onClick={() => setFiltroStatus(f.value)}
                 className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${f.cls} ${filtroStatus === f.value ? 'ring-2 ring-blue-400 ring-offset-1' : ''}`}>
@@ -118,14 +120,13 @@ export default function MapaPublico() {
                     <div className="min-w-[200px]">
                       {r.categoria && <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">{r.categoria}</p>}
                       <h4 className="font-bold text-slate-800 text-sm mb-1">{r.titulo}</h4>
-                      {r.local && <p className="text-xs text-slate-500 mb-2">📍 {r.local}</p>}
+                      {r.local && <p className="text-xs text-slate-500 mb-2"> {r.local}</p>}
                       {r.descricao && <p className="text-xs text-slate-600 mb-2 italic">"{r.descricao}"</p>}
                       <div className="flex justify-between items-center pt-2 border-t border-slate-100">
                         <span className="text-xs text-slate-400">{r.data}</span>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          r.status === 'Pendente' ? 'bg-red-100 text-red-700' :
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.status === 'Pendente' ? 'bg-red-100 text-red-700' :
                           r.status === 'Em andamento' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-green-100 text-green-700'}`}>
+                            'bg-green-100 text-green-700'}`}>
                           {r.status}
                         </span>
                       </div>
