@@ -40,7 +40,7 @@ export default function Header() {
             <Link to="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
               <img src="/logo.png" alt={`Logo ${platformName}`} className="w-10 h-10 object-contain" />
               <span className="font-bold text-xl text-slate-800 leading-tight">
-                {platformName.split(' ')[0]} <span className="font-normal text-slate-500">{platformName.split(' ').slice(1).join(' ')}</span>
+                {platformName ? platformName.split(' ')[0] : 'Conecta'} <span className="font-normal text-slate-500">{platformName ? platformName.split(' ').slice(1).join(' ') : 'Cidadão'}</span>
               </span>
             </Link>
           </div>
@@ -72,16 +72,16 @@ export default function Header() {
                   onClick={() => setShowUserMenu(!showUserMenu)}
                   className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200 hover:bg-slate-100 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
                 >
-                  <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm overflow-hidden">
-                    {user.profilePic ? (
-                      <img src={user.profilePic} alt="User" className="w-full h-full object-cover" />
-                    ) : (
-                      user.name.charAt(0).toUpperCase()
-                    )}
-                  </div>
+                   <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm overflow-hidden">
+                     {user.profilepic || user.profilePic ? (
+                       <img src={user.profilepic || user.profilePic} alt="User" className="w-full h-full object-cover" />
+                     ) : (
+                       user?.name ? user.name.charAt(0).toUpperCase() : '?'
+                     )}
+                   </div>
                   <div className="hidden sm:block text-left mr-1">
-                    <p className="text-sm font-medium text-gray-700 max-w-[120px] truncate leading-tight">{user.name}</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-tight">{user.role}</p>
+                    <p className="text-sm font-medium text-gray-700 max-w-[120px] truncate leading-tight">{user?.name || 'Usuário'}</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-tight">{user?.role || ''}</p>
                   </div>
                   <ChevronDown size={14} className="text-slate-400 hidden sm:block" />
                 </button>

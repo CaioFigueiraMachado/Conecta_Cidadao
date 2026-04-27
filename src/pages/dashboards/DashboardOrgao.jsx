@@ -1,31 +1,31 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../../components/DashboardLayout';
-import { getAllReports, updateReportStatus } from '../../services/storage';
-import { AlertCircle, Clock, CheckCircle, BarChart3, TrendingUp, Filter, Search, MoreHorizontal, MapPin, Calendar, ArrowUpRight, MessageSquare, ShieldAlert, Sparkles } from 'lucide-react';
+import { getAllReports, subscribeToReports } from '../../services/storage';
+import { AlertCircle, Clock, CheckCircle, BarChart3, TrendingUp, MessageSquare, ArrowUpRight, ShieldAlert } from 'lucide-react';
 
 export default function DashboardOrgao() {
   const [reports, setReports] = useState([]);
-  const [stats, setStats] = useState({
-    total: 0,
-    pendentes: 0,
-    emAndamento: 0,
-    resolvidos: 0,
-    eficiencia: 0
-  });
+  const [stats, setStats] = useState({ total: 0, pendentes: 0, emAndamento: 0, resolvidos: 0, eficiencia: 0 });
 
-  useEffect(() => {
-    const all = getAllReports();
+  const loadReports = async () => {
+    const all = await getAllReports();
     setReports(all);
-    
     const pendentes = all.filter(r => r.status === 'Pendente').length;
     const emAndamento = all.filter(r => r.status === 'Em andamento').length;
     const resolvidos = all.filter(r => r.status === 'Resolvido').length;
     const total = all.length;
     const eficiencia = total > 0 ? Math.round((resolvidos / total) * 100) : 0;
-
     setStats({ total, pendentes, emAndamento, resolvidos, eficiencia });
+  };
+
+  useEffect(() => {
+    loadReports();
+    const unsub = subscribeToReports(loadReports);
+    return unsub;
   }, []);
+
+  const alertaPrioritario = reports.find(r => r.urgencia === 'Alta' && r.status !== 'Resolvido');
 
   const metricas = [
     { label: 'Demandas Totais', value: stats.total, icon: BarChart3, color: 'text-blue-600', bg: 'bg-blue-50' },
@@ -39,16 +39,22 @@ export default function DashboardOrgao() {
       
       {/* Alertas Críticos / Notificações */}
       <div className="mb-10 flex flex-col md:flex-row gap-6">
-        <div className="flex-1 bg-red-600 rounded-[3rem] p-10 text-white shadow-2xl relative overflow-hidden group">
+        <div className={`flex-1 ${alertaPrioritario ? 'bg-red-600' : 'bg-slate-800'} rounded-[3rem] p-10 text-white shadow-2xl relative overflow-hidden group`}>
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 blur-3xl rounded-full group-hover:scale-150 transition-transform duration-700"></div>
           <div className="relative z-10 flex items-center gap-6">
             <div className="bg-white/20 p-4 rounded-2xl backdrop-blur-sm">
               <ShieldAlert size={32} />
             </div>
             <div>
-              <p className="text-red-100 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Alerta Prioritário</p>
-              <h3 className="text-xl font-black mb-1">Vazamento Crítico - Zona Sul</h3>
-              <p className="text-red-100/80 text-xs font-medium">Equipe enviada. Previsão de chegada: 15 min.</p>
+              <p className={`${alertaPrioritario ? 'text-red-100' : 'text-slate-300'} text-[10px] font-black uppercase tracking-[0.2em] mb-1`}>Alerta Prioritário</p>
+              {alertaPrioritario ? (
+                <>
+                  <h3 className="text-xl font-black mb-1">{alertaPrioritario.titulo}</h3>
+                  <p className="text-white/80 text-xs font-medium line-clamp-1">{alertaPrioritario.local} • {alertaPrioritario.data}</p>
+                </>
+              ) : (
+                <h3 className="text-lg font-bold text-slate-200">Nenhuma ocorrência urgente no momento.</h3>
+              )}
             </div>
           </div>
         </div>

@@ -1,21 +1,32 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
 import { Users, FileWarning, CheckCircle, ShieldAlert, TrendingUp, Clock, ArrowUpRight, ShieldCheck } from 'lucide-react';
 import { getAllReports, getAllUsers, getPartnerRequests, resolvePartnerRequest } from '../../services/storage';
 import { Link } from 'react-router-dom';
+import Swal from 'sweetalert2';
 
 export default function DashboardAdmin() {
-  const [reports] = useState(getAllReports());
-  const [users] = useState(getAllUsers());
-  const [partnerRequests, setPartnerRequests] = useState(getPartnerRequests());
+  const [reports, setReports] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [partnerRequests, setPartnerRequests] = useState([]);
 
-  const handleResolve = (id, accept) => {
-    resolvePartnerRequest(id, accept);
-    setPartnerRequests(getPartnerRequests());
-    
-    if (accept) {
-      const req = partnerRequests.find(r => r.id === id);
-      alert(`Parceria Aprovada! 🏢\n\nUma conta foi criada automaticamente para a empresa.\n\nE-mail de acesso: ${req.email}\nSenha provisória: 123\n\n(A empresa poderá alterar a senha pelo painel de Perfil depois)`);
+  const loadData = async () => {
+    const [r, u, pr] = await Promise.all([getAllReports(), getAllUsers(), getPartnerRequests()]);
+    setReports(r); setUsers(u); setPartnerRequests(pr);
+  };
+
+  useEffect(() => { loadData(); }, []);
+
+  const handleResolve = async (id, accept) => {
+    const req = partnerRequests.find(r => r.id === id);
+    await resolvePartnerRequest(id, accept);
+    await loadData();
+    if (accept && req) {
+      Swal.fire({
+        icon: 'success', title: 'Parceria Aprovada! 🏢',
+        html: `Conta criada.<br><b>E-mail:</b> ${req.email}<br><b>Senha:</b> 123`,
+        confirmButtonColor: '#2563eb'
+      });
     }
   };
 
@@ -32,110 +43,68 @@ export default function DashboardAdmin() {
     { label: 'Resolvidos', value: resolvidos, icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-50' }
   ];
 
-  const categorias = reports.reduce((acc, r) => {
-    if (r.categoria) acc[r.categoria] = (acc[r.categoria] || 0) + 1;
-    return acc;
-  }, {});
+  const categorias = reports.reduce((acc, r) => { if (r.categoria) acc[r.categoria] = (acc[r.categoria] || 0) + 1; return acc; }, {});
   const topCategorias = Object.entries(categorias).sort((a, b) => b[1] - a[1]).slice(0, 4);
 
   return (
-    <DashboardLayout title="Painel de Controle Administrativo">
-      
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
+    <DashboardLayout title="Painel de Administração">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {stats.map((s, i) => (
-          <div key={i} className="bg-white p-10 rounded-[3rem] shadow-sm border border-slate-100 hover:shadow-xl hover:border-blue-100 transition-all duration-500 group">
-            <div className={`w-16 h-16 rounded-2xl ${s.bg} ${s.color} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
-              <s.icon size={28} />
+          <div key={i} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-all group">
+            <div className="flex justify-between items-start mb-4">
+              <div className={`w-12 h-12 rounded-xl ${s.bg} ${s.color} flex items-center justify-center group-hover:scale-110 transition-transform`}><s.icon size={22} /></div>
+              <span className="text-xs font-bold text-green-500 bg-green-50 px-2 py-0.5 rounded-lg">+8%</span>
             </div>
-            <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">{s.label}</p>
-            <div className="flex items-end gap-2">
-              <span className="text-4xl font-black text-slate-800">{s.value}</span>
-              <span className="text-[10px] font-bold text-green-500 bg-green-50 px-2 py-0.5 rounded-full mb-1">+8%</span>
-            </div>
+            <p className="text-slate-500 text-xs font-bold uppercase tracking-wide mb-1">{s.label}</p>
+            <span className="text-3xl font-bold text-slate-800">{s.value}</span>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 mb-10">
-        
-        {/* Gráfico / Taxa de Resolução */}
-        <div className="lg:col-span-4 bg-slate-900 rounded-[3rem] p-10 text-white shadow-2xl relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/20 blur-3xl rounded-full group-hover:bg-blue-500/30 transition-all"></div>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8">
+        <div className="lg:col-span-4 bg-blue-600 rounded-2xl p-8 text-white shadow-lg relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 blur-2xl rounded-full"></div>
           <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="bg-blue-600 p-3 rounded-2xl"><TrendingUp size={24} /></div>
-              <h3 className="text-xl font-black">Performance Global</h3>
-            </div>
-            <p className="text-slate-400 text-xs font-black uppercase tracking-widest mb-2">Taxa de Resolução</p>
-            <div className="flex items-end gap-3 mb-6">
-              <span className="text-6xl font-black">{taxaResolucao}%</span>
-              <ArrowUpRight className="text-green-400 mb-2" />
-            </div>
-            <div className="w-full bg-white/10 rounded-full h-3 mb-4">
-              <div className="bg-blue-500 h-full rounded-full transition-all duration-1000" style={{ width: `${taxaResolucao}%` }}></div>
-            </div>
-            <p className="text-slate-500 text-[10px] font-bold uppercase">{resolvidos} de {totalOcorrencias} demandas resolvidas</p>
+            <div className="flex items-center gap-3 mb-6"><div className="bg-white/20 p-2.5 rounded-lg"><TrendingUp size={20} /></div><h3 className="text-lg font-bold">Performance</h3></div>
+            <p className="text-blue-100 text-xs font-bold uppercase tracking-wider mb-2">Taxa de Resolução</p>
+            <div className="flex items-end gap-3 mb-4"><span className="text-5xl font-bold">{taxaResolucao}%</span><ArrowUpRight className="text-green-300 mb-2" size={20} /></div>
+            <div className="w-full bg-blue-900/40 rounded-full h-2 mb-3"><div className="bg-white h-full rounded-full transition-all duration-1000" style={{ width: `${taxaResolucao}%` }}></div></div>
+            <p className="text-blue-200 text-xs font-bold">{resolvidos} de {totalOcorrencias} demandas resolvidas</p>
           </div>
         </div>
-
-        {/* Categorias */}
-        <div className="lg:col-span-8 bg-white p-10 rounded-[3rem] shadow-sm border border-slate-100">
-          <div className="flex justify-between items-center mb-10">
-            <h3 className="text-xl font-black text-slate-800">Principais Demandas</h3>
-            <Link to="/mapa" className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline">Ver Mapa Completo</Link>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+        <div className="lg:col-span-8 bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+          <div className="flex justify-between items-center mb-8"><h3 className="text-lg font-bold text-slate-800">Principais Demandas</h3><Link to="/mapa" className="text-xs font-bold text-blue-600 hover:underline">Ver Mapa</Link></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {topCategorias.map(([cat, count]) => (
-              <div key={cat} className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-black text-slate-700">{cat}</span>
-                  <span className="text-xs font-bold text-slate-400">{Math.round((count / totalOcorrencias) * 100)}%</span>
-                </div>
-                <div className="w-full h-2.5 bg-slate-50 rounded-full overflow-hidden">
-                  <div className="bg-blue-600 h-full rounded-full transition-all duration-1000" style={{ width: `${Math.round((count / totalOcorrencias) * 100)}%` }}></div>
-                </div>
+              <div key={cat} className="space-y-2">
+                <div className="flex justify-between items-center"><span className="text-sm font-bold text-slate-700">{cat}</span><span className="text-xs font-bold text-slate-400">{Math.round((count / totalOcorrencias) * 100)}%</span></div>
+                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden"><div className="bg-blue-600 h-full rounded-full" style={{ width: `${Math.round((count / totalOcorrencias) * 100)}%` }}></div></div>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Tabela de Atividade */}
-      <div className="bg-white rounded-[3rem] shadow-sm border border-slate-100 overflow-hidden">
-        <div className="p-8 border-b border-slate-50 flex justify-between items-center">
-          <h3 className="text-xl font-black text-slate-800">Histórico do Sistema</h3>
-          <div className="flex gap-4">
-            <Link to="/dashboard/admin/usuarios" className="px-6 py-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 transition-all">Gestão de Usuários</Link>
-          </div>
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-8">
+        <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+          <h3 className="text-lg font-bold text-slate-800">Histórico do Sistema</h3>
+          <Link to="/dashboard/admin/usuarios" className="px-4 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-bold text-slate-600">Gestão de Usuários</Link>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-slate-50/50">
-                <th className="px-10 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Protocolo / Título</th>
-                <th className="px-10 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Localização</th>
-                <th className="px-10 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                <th className="px-10 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Data</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
+          <table className="w-full text-left text-sm">
+            <thead><tr className="bg-slate-50/50">
+              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Protocolo / Título</th>
+              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Localização</th>
+              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Status</th>
+              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Data</th>
+            </tr></thead>
+            <tbody className="divide-y divide-slate-100">
               {reports.slice(0, 6).map((r) => (
-                <tr key={r.id} className="hover:bg-slate-50/50 transition-colors group">
-                  <td className="px-10 py-6">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-slate-100 text-slate-400 rounded-xl flex items-center justify-center font-black text-xs">#{r.id.toString().slice(-3)}</div>
-                      <span className="text-sm font-black text-slate-800">{r.titulo}</span>
-                    </div>
-                  </td>
-                  <td className="px-10 py-6 text-xs font-bold text-slate-500">{r.local}</td>
-                  <td className="px-10 py-6">
-                    <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase ${
-                      r.status === 'Resolvido' ? 'bg-green-50 text-green-600' : 
-                      r.status === 'Em andamento' ? 'bg-purple-50 text-purple-600' : 'bg-orange-50 text-orange-600'
-                    }`}>{r.status}</span>
-                  </td>
-                  <td className="px-10 py-6 text-right text-[10px] font-black text-slate-300 uppercase">{r.data}</td>
+                <tr key={r.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-6 py-4"><div className="flex items-center gap-3"><div className="w-8 h-8 bg-slate-100 text-slate-500 rounded-lg flex items-center justify-center font-bold text-[10px]">#{String(r.id).slice(-3)}</div><span className="font-semibold text-slate-800">{r.titulo}</span></div></td>
+                  <td className="px-6 py-4 text-xs font-medium text-slate-500">{r.local}</td>
+                  <td className="px-6 py-4"><span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${r.status === 'Resolvido' ? 'bg-green-100 text-green-600' : r.status === 'Em andamento' ? 'bg-purple-100 text-purple-600' : 'bg-orange-100 text-orange-600'}`}>{r.status}</span></td>
+                  <td className="px-6 py-4 text-right text-xs font-medium text-slate-400">{r.data}</td>
                 </tr>
               ))}
             </tbody>
@@ -143,51 +112,32 @@ export default function DashboardAdmin() {
         </div>
       </div>
 
-      {/* Solicitações de Parceria */}
-      <div className="bg-white rounded-[3rem] shadow-sm border border-slate-100 overflow-hidden mt-10">
-        <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-blue-50/50">
-          <div className="flex items-center gap-4">
-            <div className="bg-blue-600 text-white p-3 rounded-2xl shadow-lg"><ShieldCheck size={24} /></div>
-            <div>
-              <h3 className="text-xl font-black text-slate-800">Aprovações de Parceiros</h3>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
-                {partnerRequests.filter(r => r.status === 'Pendente').length} pendentes
-              </p>
-            </div>
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div className="p-6 border-b border-slate-100 flex items-center gap-3 bg-blue-50/30">
+          <div className="bg-blue-600 text-white p-2 rounded-lg shadow-md"><ShieldCheck size={20} /></div>
+          <div>
+            <h3 className="text-lg font-bold text-slate-800">Aprovações de Parceiros</h3>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{partnerRequests.filter(r => r.status === 'Pendente').length} pendentes</p>
           </div>
         </div>
-        <div className="p-8">
+        <div className="p-6">
           {partnerRequests.length === 0 ? (
-             <p className="text-center text-slate-400 py-10 font-bold uppercase tracking-widest text-sm">Nenhuma solicitação encontrada</p>
+            <p className="text-center text-slate-400 py-8 text-sm">Nenhuma solicitação encontrada</p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {partnerRequests.map(req => (
-                <div key={req.id} className="border border-slate-100 rounded-[2rem] p-6 shadow-sm hover:shadow-xl transition-all relative overflow-hidden group">
-                  <div className={`absolute top-0 right-0 px-4 py-1.5 rounded-bl-[1rem] text-[10px] font-black uppercase tracking-widest ${
-                    req.status === 'Pendente' ? 'bg-orange-100 text-orange-600' :
-                    req.status === 'Aprovado' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
-                  }`}>
-                    {req.status}
+                <div key={req.id} className="border border-slate-100 rounded-2xl p-5 hover:border-blue-200 transition-all relative shadow-sm">
+                  <div className={`absolute top-0 right-0 px-3 py-1 rounded-bl-xl text-[9px] font-bold uppercase tracking-wider ${req.status === 'Pendente' ? 'bg-orange-100 text-orange-600' : req.status === 'Aprovado' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>{req.status}</div>
+                  <h4 className="font-bold text-slate-800 mb-0.5">{req.empresa}</h4>
+                  <p className="text-[10px] text-slate-400 font-bold mb-3">{req.cnpj}</p>
+                  <div className="space-y-1 mb-4">
+                    <p className="text-xs text-slate-600"><strong>Contato:</strong> {req.email}</p>
+                    <div className="bg-slate-50 p-3 rounded-xl mt-2"><p className="text-[11px] text-slate-500 italic">"{req.ideia}"</p></div>
                   </div>
-                  <h4 className="text-lg font-black text-slate-800 mb-1">{req.empresa}</h4>
-                  <p className="text-xs font-bold text-slate-400 mb-4">{req.cnpj}</p>
-                  
-                  <div className="space-y-2 mb-6">
-                    <p className="text-sm text-slate-600"><strong>Responsável:</strong> {req.responsavel} ({req.cargo})</p>
-                    <p className="text-sm text-slate-600"><strong>Contato:</strong> {req.email} | {req.telefone}</p>
-                    <div className="bg-slate-50 p-4 rounded-2xl mt-4">
-                      <p className="text-xs text-slate-500 italic">"{req.ideia}"</p>
-                    </div>
-                  </div>
-
                   {req.status === 'Pendente' && (
-                    <div className="flex gap-4">
-                      <button onClick={() => handleResolve(req.id, true)} className="flex-1 bg-green-500 hover:bg-green-600 text-white font-black uppercase tracking-widest py-4 rounded-xl transition-all text-[10px] shadow-lg shadow-green-200">
-                        Aprovar Parceria
-                      </button>
-                      <button onClick={() => handleResolve(req.id, false)} className="flex-1 bg-slate-100 hover:bg-red-100 hover:text-red-600 text-slate-600 font-black uppercase tracking-widest py-4 rounded-xl transition-all text-[10px]">
-                        Recusar
-                      </button>
+                    <div className="flex gap-3">
+                      <button onClick={() => handleResolve(req.id, true)} className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2 rounded-lg text-xs">Aprovar</button>
+                      <button onClick={() => handleResolve(req.id, false)} className="flex-1 bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-600 font-bold py-2 rounded-lg text-xs">Recusar</button>
                     </div>
                   )}
                 </div>
@@ -196,7 +146,6 @@ export default function DashboardAdmin() {
           )}
         </div>
       </div>
-
     </DashboardLayout>
   );
 }

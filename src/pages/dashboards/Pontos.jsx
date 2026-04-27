@@ -1,191 +1,172 @@
 import DashboardLayout from '../../components/DashboardLayout';
-import { Star, Gift, Ticket, Coffee, ShoppingBag, Check, Sparkles, TrendingUp, ArrowRight, Wallet } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { updateUser, getAllBenefits, getRedeemedBenefits, getReportsByUser, redeemBenefit } from '../../services/storage';
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-
-const beneficiosQuick = [
-  { id: 1, nome: 'Ingresso de Cinema', pontos: 150, icone: Ticket, cor: 'bg-red-50 text-red-600', empresa: 'Cineplex' },
-  { id: 2, nome: 'Vale-Café Gourmet', pontos: 50, icone: Coffee, cor: 'bg-amber-50 text-amber-600', empresa: 'Café do Ponto' },
-  { id: 3, nome: 'Desconto 10% Mercado', pontos: 300, icone: ShoppingBag, cor: 'bg-green-50 text-green-600', empresa: 'Mercado Bom Preço' },
-];
+import { useEffect, useState } from 'react';
+import { getPointsTransactions, subscribeToPointsTransactions, getRedeemedBenefits, findUserByEmail } from '../../services/storage';
+import { RefreshCw, Ticket, Gift, Building } from 'lucide-react';
 
 export default function Pontos() {
   const { user, updateUserSession } = useAuth();
   const pontos = user?.pontos || 0;
-  const [resgatados, setResgatados] = useState([]);
-  const [dbBenefits, setDbBenefits] = useState([]);
-  const [history, setHistory] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [redeemed, setRedeemed] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const loadData = async () => {
+    if (!user?.id) return;
+    setLoading(true);
+    try {
+      // Atualiza o saldo de pontos buscando o usuário atualizado
+      const freshUser = await findUserByEmail(user.email);
+      if (freshUser && freshUser.pontos !== user.pontos) {
+        updateUserSession(freshUser);
+      }
+      
+      const transData = await getPointsTransactions(user.id);
+      setTransactions(transData);
+
+      const redeemedData = await getRedeemedBenefits(user.id);
+      setRedeemed(redeemedData);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    setDbBenefits(getAllBenefits());
-    if (user) {
-      const userRedeemed = getRedeemedBenefits(user.id);
-      const userReports = getReportsByUser(user.id);
-      
-      const historyItems = [
-        ...userRedeemed.map(r => ({
-          title: `Resgate de ${r.nome}`,
-          desc: `Código: ${r.code} - ${r.empresa}`,
-          points: `-${r.pontos}`,
-          date: r.data,
-          type: 'loss',
-          timestamp: parseInt(r.id)
-        })),
-        ...userReports.map(r => ({
-          title: `Reporte de ${r.categoria}`,
-          desc: `Protocolo #${r.id} - ${r.local}`,
-          points: '+50',
-          date: r.data,
-          type: 'gain',
-          timestamp: r.id
-        }))
-      ].sort((a, b) => b.timestamp - a.timestamp);
-      
-      setHistory(historyItems);
-      setResgatados(userRedeemed.map(r => r.benefitId));
-    }
-  }, [user, user?.pontos]);
+    loadData();
+  }, [user?.id, user?.pontos]);
 
-  const mappedDbBenefits = dbBenefits.map(b => ({
-    id: `db-${b.id}`,
-    nome: b.nome,
-    pontos: b.pontos,
-    icone: b.categoria === 'Alimentação' ? Coffee : b.categoria === 'Lazer' ? Ticket : b.categoria === 'Varejo' ? ShoppingBag : Gift,
-    cor: 'bg-blue-50 text-blue-600',
-    empresa: b.empresa || 'Parceiro'
-  }));
+  useEffect(() => {
+    if (!user?.id) return;
 
-  const allQuickBenefits = [...beneficiosQuick, ...mappedDbBenefits].slice(0, 4);
+    const unsub = subscribeToPointsTransactions(user.id, (payload) => {
+      if (payload.eventType === 'INSERT' && payload.new) {
+        setTransactions(prev => [payload.new, ...prev]);
+      }
+    });
 
-  const nivelInfo = pontos < 100 ? { label: 'Iniciante', next: 100, level: 1 } :
-                   pontos < 300 ? { label: 'Fiscal da Cidade', next: 300, level: 2 } :
-                   { label: 'Guardião Urbano', next: 600, level: 3 };
+    return unsub;
+  }, [user?.id]);
 
-  const handleResgatar = (b) => {
-    if (pontos < b.pontos) return;
-    const novosPontos = pontos - b.pontos;
-    const updatedUser = { ...user, pontos: novosPontos };
-    updateUser(user.id, { pontos: novosPontos });
-    updateUserSession(updatedUser);
-    redeemBenefit(user.id, b);
-    setResgatados(prev => [...prev, b.id]);
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   };
+
+  const creditTransactions = transactions.filter(t => t.tipo === 'credito');
+  const debitTransactions = transactions.filter(t => t.tipo === 'debito');
 
   return (
     <DashboardLayout title="Extrato e Recompensas">
-      
-      {/* Hero Card - Wallet Style */}
-      <div className="bg-slate-900 rounded-[3rem] p-10 text-white relative overflow-hidden shadow-2xl mb-10 group">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/20 blur-[120px] rounded-full group-hover:bg-blue-600/30 transition-all duration-700"></div>
-        <div className="relative z-10 flex flex-col lg:flex-row justify-between items-center gap-10">
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="bg-blue-600 p-3 rounded-2xl shadow-lg shadow-blue-500/20"><Wallet size={24} /></div>
-              <h2 className="text-xl font-black text-blue-400 uppercase tracking-widest">Carteira Digital</h2>
-            </div>
-            <div className="flex items-baseline gap-4 mb-2">
-              <span className="text-7xl font-black tracking-tighter">{pontos}</span>
-              <span className="text-2xl font-bold text-slate-400 uppercase tracking-widest">Pontos</span>
-            </div>
-            <p className="text-slate-500 font-medium">Sua moeda social para trocar por benefícios exclusivos.</p>
-          </div>
-
-          <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-[2.5rem] min-w-[320px] shadow-2xl">
-            <div className="flex justify-between items-center mb-6">
-              <div className="flex items-center gap-2">
-                <Sparkles size={16} className="text-yellow-400" />
-                <span className="text-xs font-black uppercase tracking-widest text-slate-300">Nível {nivelInfo.level}</span>
-              </div>
-              <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">{nivelInfo.label}</span>
-            </div>
-            <div className="w-full bg-white/10 rounded-full h-3 mb-4">
-              <div className="bg-blue-500 h-full rounded-full shadow-[0_0_15px_rgba(59,130,246,0.5)] transition-all duration-1000" style={{ width: `${Math.min((pontos / nivelInfo.next) * 100, 100)}%` }}></div>
-            </div>
-            <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
-              <span>{pontos} PTS</span>
-              <span>PRÓXIMO: {nivelInfo.next} PTS</span>
-            </div>
-          </div>
+      <div className="p-10">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold text-slate-800">Meus Pontos</h1>
+          <button 
+            onClick={loadData} 
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all shadow-sm active:scale-95 disabled:opacity-50"
+          >
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            Atualizar Saldo
+          </button>
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-        <div className="lg:col-span-8 space-y-8">
-          <div className="bg-white p-10 rounded-[3rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
-            <div className="flex justify-between items-center mb-10">
-              <h3 className="text-2xl font-black text-slate-800 tracking-tight">Ganhos Recentes</h3>
-              <div className="bg-green-50 border border-green-100 text-green-600 px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest">+50 PTS HOJE</div>
-            </div>
-            <div className="space-y-6">
-              {history.length === 0 ? (
-                <div className="text-center text-slate-400 py-10 font-bold uppercase tracking-widest text-sm">
-                  Nenhum ganho ou resgate recente.
-                </div>
-              ) : history.slice(0, 5).map((h, i) => (
-                <div key={i} className="flex items-center justify-between p-6 bg-slate-50/80 rounded-[2rem] border border-slate-50 group hover:bg-white hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:border-blue-100 transition-all duration-300">
-                  <div className="flex items-center gap-5">
-                    <div className={`w-12 h-12 rounded-[1.2rem] flex items-center justify-center font-black text-xl shadow-inner ${h.type === 'gain' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-                      {h.type === 'gain' ? '+' : '-'}
-                    </div>
+        {/* Saldo Atual */}
+        <div className="bg-blue-50 p-10 rounded-2xl text-center mb-10 border border-blue-100 shadow-inner">
+          <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">Saldo Atual</p>
+          <p className="text-7xl font-black text-blue-600">{pontos}</p>
+          <p className="text-slate-500 mt-4 font-medium">Pontos disponíveis para resgate em benefícios</p>
+        </div>
+
+        {/* Extrato de Pontos */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+          {/* Pontos Recebidos */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <h2 className="text-lg font-bold text-green-600 mb-4 flex items-center">
+              <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Pontos Recebidos
+            </h2>
+            <div className="space-y-3 max-h-80 overflow-y-auto custom-scrollbar pr-2">
+              {creditTransactions.length === 0 ? (
+                <p className="text-slate-400 text-sm font-medium">Nenhum ponto recebido ainda.</p>
+              ) : (
+                creditTransactions.map((t) => (
+                  <div key={t.id} className="flex justify-between items-center p-4 bg-green-50/50 rounded-xl border border-green-100">
                     <div>
-                      <p className="text-base font-black text-slate-800">{h.title}</p>
-                      <p className="text-xs font-bold text-slate-400 mt-0.5">{h.desc}</p>
+                      <p className="text-sm font-bold text-slate-700">{t.descricao}</p>
+                      <p className="text-xs text-slate-500 font-medium mt-1">{formatDate(t.created_at)}</p>
                     </div>
+                    <span className="text-lg font-black text-green-600 ml-4">+{t.pontos}</span>
                   </div>
-                  <div className="text-right">
-                    <p className={`text-xl font-black ${h.type === 'gain' ? 'text-green-600' : 'text-red-500'}`}>{h.points}</p>
-                    <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mt-1">{h.date}</p>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Pontos Gastos */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <h2 className="text-lg font-bold text-red-600 mb-4 flex items-center">
+              <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              Pontos Gastos
+            </h2>
+            <div className="space-y-3 max-h-80 overflow-y-auto custom-scrollbar pr-2">
+              {debitTransactions.length === 0 ? (
+                <p className="text-slate-400 text-sm font-medium">Nenhum ponto gasto ainda.</p>
+              ) : (
+                debitTransactions.map((t) => (
+                  <div key={t.id} className="flex justify-between items-center p-4 bg-red-50/50 rounded-xl border border-red-100">
+                    <div>
+                      <p className="text-sm font-bold text-slate-700">{t.descricao}</p>
+                      <p className="text-xs text-slate-500 font-medium mt-1">{formatDate(t.created_at)}</p>
+                    </div>
+                    <span className="text-lg font-black text-red-600 ml-4">-{t.pontos}</span>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </div>
 
-        <div className="lg:col-span-4 space-y-8">
-          <div className="bg-white p-10 rounded-[3rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
-            <h3 className="text-2xl font-black text-slate-800 mb-8 tracking-tight">Resgate Rápido</h3>
-            <div className="space-y-6">
-              {allQuickBenefits.map(b => {
-                const Icon = b.icone;
-                const podeResgatar = pontos >= b.pontos;
-                const jaResgatou = resgatados.includes(b.id);
-                return (
-                  <div key={b.id} className={`p-6 rounded-[2rem] border transition-all ${jaResgatou ? 'bg-green-50 border-green-100' : 'bg-slate-50 border-slate-50 hover:bg-white hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 hover:border-blue-100'}`}>
-                    <div className="flex items-center gap-4 mb-5">
-                      <div className={`p-3.5 rounded-[1.2rem] shadow-sm ${b.cor}`}><Icon size={22} /></div>
-                      <div>
-                        <p className="text-sm font-black text-slate-800 leading-tight">{b.nome}</p>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{b.empresa}</p>
-                      </div>
+        {/* Benefícios Resgatados (Vouchers) */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+          <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+            <Ticket className="text-blue-600" size={24} />
+            Meus Benefícios Resgatados (Vouchers)
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {redeemed.length === 0 ? (
+              <div className="col-span-full py-10 text-center opacity-50">
+                <Gift size={40} className="mx-auto text-slate-400 mb-4" />
+                <p className="font-bold text-slate-500">Você ainda não resgatou nenhum benefício.</p>
+              </div>
+            ) : (
+              redeemed.map(r => (
+                <div key={r.id} className="border border-slate-200 rounded-2xl p-6 relative overflow-hidden bg-gradient-to-br from-white to-slate-50 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="absolute -right-6 -top-6 text-slate-100 rotate-12">
+                    <Ticket size={100} />
+                  </div>
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-blue-600 mb-2">
+                      <Building size={14} /> {r.empresa}
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-blue-600 flex items-center gap-1 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-100">
-                        <Star size={12} fill="currentColor" /> {b.pontos} PTS
-                      </span>
-                      <button 
-                        disabled={!podeResgatar || jaResgatou}
-                        onClick={() => handleResgatar(b)}
-                        className={`px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
-                          jaResgatou ? 'text-green-600 bg-green-100/50' : 
-                          podeResgatar ? 'bg-blue-600 text-white shadow-[0_8px_20px_rgba(37,99,235,0.2)] hover:scale-105 active:scale-95' : 
-                          'text-slate-400 bg-slate-100'
-                        }`}
-                      >
-                        {jaResgatou ? 'CONCLUÍDO' : podeResgatar ? 'RESGATAR' : 'BLOQUEADO'}
-                      </button>
+                    <h3 className="font-bold text-slate-800 text-lg mb-1 leading-tight">{r.nome}</h3>
+                    <p className="text-xs text-slate-400 font-medium mb-6">Resgatado em {r.data}</p>
+                    
+                    <div className="bg-slate-800 text-white rounded-xl p-4 text-center">
+                      <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">CÓDIGO DO VOUCHER</p>
+                      <p className="text-2xl font-black tracking-widest">{r.code}</p>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-            <Link to="/beneficios" className="flex items-center justify-center gap-3 w-full mt-10 py-5 bg-slate-900 text-white rounded-full font-black text-xs uppercase tracking-[0.2em] shadow-2xl hover:bg-blue-600 hover:shadow-[0_15px_30px_rgba(37,99,235,0.3)] hover:-translate-y-1 transition-all duration-300 group">
-              Ver Catálogo Completo <ArrowRight size={16} className="group-hover:translate-x-1.5 transition-transform" />
-            </Link>
+                </div>
+              ))
+            )}
           </div>
         </div>
+
       </div>
     </DashboardLayout>
   );

@@ -1,11 +1,55 @@
+import { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
-import { AlertTriangle, MapPin, CheckCircle, Clock, ChevronRight, Filter } from 'lucide-react';
+import { AlertTriangle, MapPin, CheckCircle, Clock, ChevronRight, Filter, Send, X, User } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { getReportsByUser } from '../../services/storage';
+import { getReportsByUser, addMessage, getMessagesByReport, subscribeToMessages } from '../../services/storage';
 
 export default function Ocorrencias() {
   const { user } = useAuth();
-  const ocorrencias = getReportsByUser(user?.id);
+  const [ocorrencias, setOcorrencias] = useState([]);
+  const [selectedOc, setSelectedOc] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      if (user?.id) {
+        const data = await getReportsByUser(user.id);
+        setOcorrencias(data);
+      }
+      setLoading(false);
+    };
+    loadData();
+  }, [user]);
+
+  useEffect(() => {
+    if (selectedOc) {
+      const loadMessages = async () => {
+        const msgs = await getMessagesByReport(selectedOc.id);
+        setMessages(msgs);
+      };
+      loadMessages();
+      const unsub = subscribeToMessages(selectedOc.id, () => loadMessages());
+      return unsub;
+    }
+  }, [selectedOc]);
+
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!newMessage.trim()) return;
+    
+    await addMessage(selectedOc.id, {
+      senderId: user.id,
+      senderName: user.name,
+      text: newMessage,
+      role: user.role
+    });
+    
+    const msgs = await getMessagesByReport(selectedOc.id);
+    setMessages(msgs);
+    setNewMessage('');
+  };
 
   return (
     <DashboardLayout title="Minhas Ocorrências">
@@ -30,7 +74,12 @@ export default function Ocorrencias() {
         {/* Listagem Estilo Premium */}
         <div className="bg-white rounded-[3rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 overflow-hidden">
           <div className="divide-y divide-slate-50">
-            {ocorrencias.length === 0 ? (
+            {loading ? (
+              <div className="p-24 text-center">
+                <div className="w-12 h-12 border-4 border-slate-200 border-t-slate-400 rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Carregando...</p>
+              </div>
+            ) : ocorrencias.length === 0 ? (
               <div className="p-24 text-center">
                 <AlertTriangle size={64} className="mx-auto mb-6 text-slate-200" />
                 <h3 className="text-2xl font-black text-slate-800 mb-2">Sem registros</h3>
@@ -66,8 +115,11 @@ export default function Ocorrencias() {
                     oc.status === 'Resolvido' ? 'bg-green-50 text-green-600 border-green-100' :
                     oc.status === 'Em andamento' ? 'bg-purple-50 text-purple-600 border-purple-100' : 'bg-orange-50 text-orange-600 border-orange-100'
                   }`}>{oc.status}</span>
-                  <button className="p-4 bg-slate-50 text-slate-300 rounded-2xl group-hover:bg-blue-600 group-hover:text-white transition-all">
-                    <ChevronRight size={20} />
+                  <button 
+                    onClick={() => setSelectedOc(oc)}
+                    className="p-4 bg-slate-50 text-slate-300 rounded-2xl group-hover:bg-blue-600 group-hover:text-white transition-all flex items-center gap-2 font-bold text-xs"
+                  >
+                    CHAT <ChevronRight size={20} />
                   </button>
                 </div>
               </div>
@@ -75,6 +127,61 @@ export default function Ocorrencias() {
           </div>
         </div>
       </div>
+
+      {/* Chat Modal */}
+      {selectedOc && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md animate-in fade-in">
+          <div className="bg-white w-full max-w-2xl h-[600px] rounded-[3rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in duration-300">
+            {/* Header */}
+            <div className="p-8 bg-slate-900 text-white flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-black tracking-tight">{selectedOc.titulo}</h3>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Chat com Órgão Público · #{selectedOc.id}</p>
+              </div>
+              <button onClick={() => setSelectedOc(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Messages Area */}
+            <div className="flex-1 overflow-y-auto p-8 space-y-6 bg-slate-50/50 custom-scrollbar">
+              {messages.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center opacity-40">
+                  <div className="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center mb-4"><Send size={24} /></div>
+                  <p className="font-bold text-sm">Nenhuma mensagem ainda.<br/>Inicie o contato com a prefeitura.</p>
+                </div>
+              ) : messages.map((m) => (
+                <div key={m.id} className={`flex ${m.sender_id === user.id ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[80%] p-4 rounded-[1.5rem] shadow-sm ${
+                    m.sender_id === user.id 
+                      ? 'bg-blue-600 text-white rounded-tr-none' 
+                      : 'bg-white border border-slate-100 text-slate-800 rounded-tl-none'
+                  }`}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[9px] font-black uppercase opacity-70 tracking-widest">{m.sender_name}</span>
+                      <span className="text-[9px] font-bold opacity-50">{m.timestamp}</span>
+                    </div>
+                    <p className="text-sm font-medium leading-relaxed">{m.content}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Input Area */}
+            <form onSubmit={handleSendMessage} className="p-6 bg-white border-t border-slate-100 flex gap-4 items-center">
+              <input 
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                placeholder="Escreva sua mensagem..." 
+                className="flex-1 px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 font-bold text-sm"
+              />
+              <button type="submit" className="p-4 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 shadow-xl shadow-blue-100 transition-all active:scale-95">
+                <Send size={20} />
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

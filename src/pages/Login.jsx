@@ -35,10 +35,10 @@ export default function Login() {
     let resultUser = null;
 
     if (isLogin) {
-      resultUser = login(email, password);
+      resultUser = await login(email, password);
     } else {
       if (!nome.trim()) { setError('Por favor, informe seu nome.'); setLoading(false); return; }
-      resultUser = registerAndLogin(nome, email, password);
+      resultUser = await registerAndLogin(nome, email, password);
     }
 
     setLoading(false);
